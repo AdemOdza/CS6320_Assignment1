@@ -73,18 +73,106 @@
 \subsection{Unigram and bigram probability computation (15\%)}
 
 \subsubsection{Preprocessing Decisions}
-We are given two plain text corpora of reviews where each line is a single review. In order to compute the counts and probabilities for the unigram and bigram, we need to tokenize the words into two flat Python lists with each word of the corpora being a single list element. We chose a list as our data structure since it is easily iterable and slicable.
+We are given two plain-text corpora of reviews where each line is a single review. In order to compute the counts and probabilities for the unigram and bigram, we need to tokenize the words into two flat Python lists with each word of the corpora being a single list element. We chose a list as our data structure since it is easily iterable and sliceable.
 
 These were the preprocessing steps that we performed:
 \begin{enumerate}
     \item[a.] Strip the leading and trailing whitespaces such as spaces, tabs, and newlines.
     \item[b.] If the line is empty after removing whitespaces, move to the next line in the file.
-    \item[c.] Preprocess the current line by converting everything into lower case.
+    \item[c.] Preprocess the current line by converting everything into lowercase.
     \item[d.] Remove the punctuations using the \texttt{re} library.
     \item[e.] If the processed line is not empty, split the line into individual words and add these into the token list.
     \item[f.] All words are flattened into a single list from the non-empty processed lines.
 \end{enumerate}
-\textbf{(Samiha to write the how and the why)}
+
+The following preprocessing decisions were made, along with the rationale behind each choice:
+
+\begin{enumerate}
+    % ---------- LOWERCASE ----------
+    \item \textbf{Lowercasing} \\
+    We converted all the text to lower case to ensure that all the words with the same spelling are treated the same way. 
+    For example, ``Hotel'' and ``hotel'' are treated the same way (as the same token). 
+    This process helped us in reducing the vocabulary size and it also helped the model generalize better. \\
+
+    We used the following line of code to convert the existing text into lower case:
+
+    \begin{listing}[ht]
+    \begin{minted}[frame=single,framesep=10pt]{python}
+line = line.lower()
+    \end{minted}
+    \caption{Converting text to lower case.}
+    \label{lst:lower}
+    \end{listing}
+
+    % ---------- REMOVE PUNCTUATION ----------
+    \item \textbf{Removed Punctuation} \\
+    All punctuation is removed so that the focus is on the actual words in the text. 
+    This decision was taken since punctuation often doesn't contribute significant meaning in bag-of-words or similar models and it can introduce unnecessary noise. \\
+
+    The following line of code was introduced to remove punctuation:
+
+    \begin{listing}[ht]
+    \begin{minted}[frame=single,framesep=10pt]{python}
+import re
+text = re.sub(r"[^\w\s]", ' ', text).strip()
+    \end{minted}
+    \caption{Removing punctuation using regular expressions.}
+    \label{lst:punct}
+    \end{listing}
+
+    We used the regular expression module from the Python library to remove the punctuation in the text. 
+
+    \begin{itemize}
+        \item \verb|re.sub(pattern, repl, text)| replaces all occurrences of the regex pattern in text with repl (here, a space `' '`).
+        \item The pattern \verb|r"[^\w\s]"| means:
+        \begin{itemize}
+            \item \verb|[...]| : a character class (matches any character inside the brackets)
+            \item \verb|^| : negation (matches any character not in the set)
+            \item \verb|\w| : matches any ``word'' character (letters, digits, or underscore)
+            \item \verb|\s| : matches any whitespace character (spaces, tabs, newlines)
+        \end{itemize}
+        So, \verb|[^\w\s]| matches any character that is not a word character and not whitespace (i.e., punctuation and symbols). 
+        All such characters are replaced with a space. 
+        Finally, \verb|.strip()| removes leading and trailing whitespace from the result.
+    \end{itemize}
+
+    % ---------- TOKENIZATION ----------
+    \item \textbf{Tokenization} \\
+    Since the data given to us is already tokenized with one review per line and the tokens separated by spaces, we simply split each line into words. 
+    This made it straightforward and easy to process each word individually. \\
+
+    The code used to perform tokenization is as follows:
+
+    \begin{listing}[ht]
+    \begin{minted}[frame=single,framesep=10pt]{python}
+def preprocess_file(input_path):
+    tokens = []
+    with open(input_path, encoding='utf-8') as fin:
+        for line in fin:
+            line = line.strip()
+            if not line:
+                continue
+            processed = preprocess_line(line)
+            if processed:
+                tokens.extend(processed.split())
+    return tokens
+    \end{minted}
+    \caption{Tokenization function to preprocess reviews.}
+    \label{lst:token}
+    \end{listing}
+
+    \begin{itemize}
+        \item \textbf{Reading Each Line:} The code reads each line (review) from the input file.
+        \item \textbf{Preprocessing:} Each line is lowercased and has punctuation removed via \verb|preprocess_line(line)|.
+        \item \textbf{Splitting into Tokens:}
+        \begin{itemize}
+            \item \verb|processed.split()| splits the cleaned line into a list of words using spaces as delimiters.
+            \item \verb|tokens.extend(...)| adds these words to the main tokens list.
+        \end{itemize}
+        \item The function returns a flat list of all tokens (words) from the file.
+    \end{itemize}
+
+\end{enumerate}
 
 The preprocessing steps resulted in two flat Python lists called \texttt{train\_tokens} and \texttt{val\_tokens}.
 
@@ -146,4 +234,3 @@ Chapter 3, Section 3.1.2, Daniel Jurafsky and James H. Martin.
 
 
 \end{document}
-
