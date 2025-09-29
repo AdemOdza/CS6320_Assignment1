@@ -1,0 +1,72 @@
+% \documentclass[singlecolumn]{article}
+\documentclass[a4paper]{article}
+
+\usepackage{color}
+\usepackage[top=1in,bottom=1in,left=1.2in,right=1.2in]{geometry}
+\usepackage{hyperref}
+\usepackage[small]{titlesec}
+
+\usepackage{graphicx}
+\usepackage{color}
+
+\usepackage[]{minted}
+\newenvironment{code}{\captionsetup{type=listing}}
+
+
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
+
+\title{Assignment 1 \\ \begin{small}\url{FULL_GITHUB_REPOSITORY_URL}\end{small}}
+\author{Full Name \\ Net ID \and Full Name \\ Net ID \and Full Name \\ Net ID}
+% For two authors:
+\author{Group11 \and  Adem Odza \\ AXO180008  \and Full Name \\ Net ID}
+%\author{Full Name \\ Net ID \and Full Name \\ Net ID}
+
+\date{}
+
+\begin{document}
+\maketitle
+\input{begin.tex}
+
+
+\section{Implementation Details}
+% 
+\begin{figure}[h]
+\centering
+\small
+\resizebox{0.5\columnwidth}{!}{
+\includegraphics{./figs/code.png}
+}
+\caption{Example of a Code Piece.}
+\label{fig:eg}
+\end{figure}
+
+
+\begin{listing}[ht]
+\begin{minted}[frame=single,framesep=10pt]{python}
+  import numpy  
+  print("this is a piece of code")
+\end{minted}
+\caption{Example of a Code Piece.}
+\label{lst:eg}
+\end{listing}
+
+\todo{
+% \begin{itemize}
+    \subsection{Unigram and bigram probability computation (15\%)}
+    \subsection{Smoothing (15\%)}
+    \subsection{Unknown word handling (15\%)}
+    \subsection{Implementation of perplexity (15\%)}
+% \end{itemize}
+}
+
+
+\section{Eval, Analysis and Findings}
+\todo{to add (30\%)}
+
+
+\section{Others}
+\todo{to add (10\%)}
+
+ 
+
+\end{document}
