@@ -3,22 +3,41 @@
 
 \usepackage{color}
 \usepackage[top=1in,bottom=1in,left=1.2in,right=1.2in]{geometry}
-\usepackage{hyperref}
 \usepackage[small]{titlesec}
 
-\usepackage{graphicx}
-\usepackage{color}
+% For clickable links and references
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=blue,
+}
 
+% For superscript citations
+\usepackage[superscript]{cite}
+
+% For code blocks
+\usepackage{graphicx}
 \usepackage[]{minted}
 \newenvironment{code}{\captionsetup{type=listing}}
+
+% For paragraph spacing instead of indentation
+\usepackage{parskip}
+
+% Custom heading sizes
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
 
 
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
 
-\title{Assignment 1 \\ \begin{small}\url{FULL_GITHUB_REPOSITORY_URL}\end{small}}
+\title{Assignment 1 \\ \begin{small}\url{https://github.com/AdemOdza/CS6320_Assignment1}\end{small}}
 \author{Full Name \\ Net ID \and Full Name \\ Net ID \and Full Name \\ Net ID}
 % For two authors:
-\author{Group11 \and  Adem Odza \\ AXO180008  \and Full Name \\ Net ID}
+\author{Group11 \and  Abhirup Mukherjee \\ AXM240026 \and Adem Odza \\ AXO180008  \and Buvana Seshathri \\ BXS240020 \and Samiha Kuncham \\SXK240025}
 %\author{Full Name \\ Net ID \and Full Name \\ Net ID}
 
 \date{}
@@ -29,7 +48,7 @@
 
 
 \section{Implementation Details}
-% 
+
 \begin{figure}[h]
 \centering
 \small
@@ -50,13 +69,60 @@
 \label{lst:eg}
 \end{listing}
 
+
+\subsection{Unigram and bigram probability computation (15\%)}
+
+\subsubsection{Preprocessing Decisions}
+We are given two plain text corpora of reviews where each line is a single review. In order to compute the counts and probabilities for the unigram and bigram, we need to tokenize the words into two flat Python lists with each word of the corpora being a single list element. We chose a list as our data structure since it is easily iterable and slicable.
+
+These were the preprocessing steps that we performed:
+\begin{enumerate}
+    \item[a.] Strip the leading and trailing whitespaces such as spaces, tabs, and newlines.
+    \item[b.] If the line is empty after removing whitespaces, move to the next line in the file.
+    \item[c.] Preprocess the current line by converting everything into lower case.
+    \item[d.] Remove the punctuations using the \texttt{re} library.
+    \item[e.] If the processed line is not empty, split the line into individual words and add these into the token list.
+    \item[f.] All words are flattened into a single list from the non-empty processed lines.
+\end{enumerate}
+\textbf{(Samiha to write the how and the why)}
+
+The preprocessing steps resulted in two flat Python lists called \texttt{train\_tokens} and \texttt{val\_tokens}.
+
+\subsubsection{Unigram Counts and Probabilities}
+We begin with our \texttt{train\_tokens} list and append start and stop tokens to it. The start token gives the bigram context of the first word and the stop token makes the bigram grammar a true probability distribution \cite{jurafsky2021slp}.
+
+The unigram is the simplest of language models. The unigram probability of a given word is computed using the formula:
+\[ P(w_i) = \frac{\text{Count}(w_i)}{N} \]
+where:
+\begin{itemize}
+    \item $\text{Count}(w_i)$ is the number of times the word $w_i$ appears in the training text.
+    \item $N$ is the total number of words (tokens) in the training text.
+\end{itemize}
+
+We chose to create a dictionary of the form \texttt{\{'$w_i$':freq($w_i$)\}} where $w_i$ is a word in our vocabulary (key) and $\text{freq}(w_i)$ is its frequency in the training corpus (value). Python dictionaries offer constant time key insertions and lookups ($O(1)$) and are simple to work with. To create this dictionary, we initialized an empty dictionary \texttt{unigram\_freq} and iterated through the tokens. If a word is not in the dictionary, then we add it to the dictionary with a frequency of 0. Otherwise, we update its frequency.
+
+Next, we initialize another empty dictionary called \texttt{unigram\_probs}. We iterate through our \texttt{unigram\_freq} dictionary and keep adding the (key, value) pairs to this new dictionary after dividing the value by $N$. This gives us our desired dictionary of the form \texttt{\{'$w_i$':P($w_i$)\}}.
+
+\subsubsection{Bigram Counts and Probabilities}
+The bigram model calculates the probability of a word based on the word that appeared immediately before it. In other words, it computes the conditional probability $P(w_i | w_{i-1})$ of the word $w_i$, given that the previous word was $w_{i-1}$. The bigram probability can be computed using the formula:
+\[ P(w_i | w_{i-1}) = \frac{\text{Count}(w_{i-1}, w_i)}{\text{Count}(w_{i-1})} \]
+where:
+\begin{itemize}
+    \item $\text{Count}(w_{i-1}, w_i)$ is the number of times the pair of words (the bigram) appears together in that order.
+    \item $\text{Count}(w_{i-1})$ is the unigram count of the preceding word.
+\end{itemize}
+
+Next, we compute the bigram frequencies into a \texttt{bigram\_freq} dictionary where each key is a bigram and the value is its frequency. To create this dictionary, we initialize the empty \texttt{bigram\_freq} dictionary and iterate. We use the \texttt{zip} function to combine our \texttt{train\_tokens\_with\_stop} list and a copy of this list starting from the second word to create a sequence of tuples, where each tuple is a bigram. We then iterate over each tuple and follow the same counting logic as before: if the tuple is not in \texttt{bigram\_freq}, we assign its value as 0. Otherwise, we increment its count. This gives us a dictionary of the form \texttt{\{('$w_{i-1}$','$w_i$'):bigram frequency\}}.
+
+Finally, we calculate the bigram probabilities by initializing an empty dictionary \texttt{bigram\_probs}. We iterate through our \texttt{bigram\_freq} dictionary and add the (key, value) pairs to this new dictionary after dividing the value by the unigram frequency of the first word in the bigram.
+
+
 \todo{
 % \begin{itemize}
-    \subsection{Unigram and bigram probability computation (15\%)}
     \subsection{Smoothing (15\%)}
     \subsection{Unknown word handling (15\%)}
     \subsection{Implementation of perplexity (15\%)}
-% \end{itemize}
+% \end{titemize}
 }
 
 
@@ -67,6 +133,17 @@
 \section{Others}
 \todo{to add (10\%)}
 
- 
+\newpage
+\begin{thebibliography}{9}
+
+\bibitem{jurafsky2021slp}
+Chapter 3, Section 3.1.2, Daniel Jurafsky and James H. Martin.
+\newblock \textit{Speech and Language Processing (3rd ed. draft)}.
+\newblock \url{https://web.stanford.edu/~jurafsky/slp3/}.
+\newblock 2021.
+
+\end{thebibliography}
+
 
 \end{document}
+
