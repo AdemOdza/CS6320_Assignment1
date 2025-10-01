@@ -204,12 +204,77 @@ Next, we compute the bigram frequencies into a \texttt{bigram\_freq} dictionary 
 
 Finally, we calculate the bigram probabilities by initializing an empty dictionary \texttt{bigram\_probs}. We iterate through our \texttt{bigram\_freq} dictionary and add the (key, value) pairs to this new dictionary after dividing the value by the unigram frequency of the first word in the bigram.
 
+\subsubsection {Perplexity}
+We use the following formula for calculating perplexity:
+$$ l = \frac{1}{N} \sum_{i=1}^N \log P(w_i | w_{i-1}, \dots, w_{i-n+1})$$
+$$ PP = 2^{-l} $$
+where:
+\begin{itemize}
+    \item $N$ is the size of the training set.
+    \item $P(w_i | w_{i-1}, \dots, w_{i-n+1})$ is the probability of the $i$th $N$-Gram
+\end{itemize}
+
+This is implemented using two functions: one for unigrams and one for bigrams. Both functions take the \texttt{corpus} (Preprocessed corpus), \texttt{unigram\_counts} (The number of unigrams in the training set), \texttt{N} (Training corpus size), \texttt{V} (Vocab size), and \texttt{k} (The smoothing parameter). The bigram perplexity function takes one additional parameter, \texttt{bigram\_counts} (The number of unigrams in the training set). \\
+
+    \begin{listing}[ht]
+    \begin{minted}[frame=single,framesep=10pt]{python}
+def calculate_unigram_perplexity(corpus, unigram_counts, N, V, k):
+
+    # M = test corpus size
+    M = len(corpus)
+    total_log_prob = 0.0
+
+    for token in corpus:
+        # set default value of count to 0 if token not found in train set
+        c_w = unigram_counts.get(token, 0) 
+        
+        prob = add_k_smoothing_unigram(c_w, N, V, k)
+        total_log_prob += math.log2(prob)
+
+    l = total_log_prob / M
+    perplexity = math.exp(-l) # 2.0 ** -l
+
+    return perplexity
+    \end{minted}
+    \caption{The Unigram perplexity function.}
+    \label{lst:unigram_perplexity}
+    \end{listing}
+
+    \begin{listing}
+                \begin{minted}[frame=single,framesep=10pt]{python}
+def calculate_bigram_perplexity(corpus, unigram_counts, bigram_counts, V, k):
+
+    # Create bigrams from the validation corpus
+    bigram_corpus = zip(corpus, corpus[1:])
+
+    M = len(corpus)
+    total_log_prob = 0.0
+
+    for bigram in bigram_corpus:
+        previous_word = bigram[0]
+        
+        # set default value of count to 0 if bigram not found in train set
+        c_w_v = bigram_counts.get(bigram, 0) 
+        
+        c_w = unigram_counts.get(previous_word, 0)
+        prob = add_k_smoothing_bigram(c_w_v, c_w, V, k)
+        total_log_prob += math.log2(prob)
+
+    l = total_log_prob / M
+    perplexity = math.exp(-l) # 2.0 ** -l
+
+    return perplexity
+    \end{minted}
+    \caption{The Bigram perplexity function.}
+    \label{lst:bigram_perplexity}
+    \end{listing}
+
+The smoothed probabilities are retrieved using the \texttt{add\_k\_smoothing\_unigram} function, which passes the value of the \texttt{k} parameter and calculates the smoothed probabilities. We get the smoothed probability of every n-gram in the corpus, find their logarithm, and find their sum. We then divide that sum by $M$ to get the $l$ value. We then raise $2$ to the power of $l$ before returning.  
 
 \todo{
 % \begin{itemize}
     \subsection{Smoothing (15\%)}
     \subsection{Unknown word handling (15\%)}
-    \subsection{Implementation of perplexity (15\%)}
 % \end{titemize}
 }
 
