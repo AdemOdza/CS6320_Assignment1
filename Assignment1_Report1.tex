@@ -26,6 +26,9 @@
 % For paragraph spacing instead of indentation
 \usepackage{parskip}
 
+% For float barriers
+\usepackage{placeins}
+
 % Custom heading sizes
 \titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
@@ -49,253 +52,235 @@
 
 \section{Implementation Details}
 
-\begin{figure}[h]
-\centering
-\small
-\resizebox{0.5\columnwidth}{!}{
-\includegraphics{./figs/code.png}
-}
-\caption{Example of a Code Piece.}
-\label{fig:eg}
-\end{figure}
+% \begin{figure}[h]
+% \centering
+% \small
+% \resizebox{0.5\columnwidth}{!}{
+% \includegraphics{./figs/code.png}
+% }
+% \caption{Example of a Code Piece.}
+% \label{fig:eg}
+% \end{figure}
 
 
-\begin{listing}[ht]
-\begin{minted}[frame=single,framesep=10pt]{python}
-  import numpy  
-  print("this is a piece of code")
-\end{minted}
-\caption{Example of a Code Piece.}
-\label{lst:eg}
-\end{listing}
+% \begin{listing}[ht]
+% \begin{minted}[frame=single,framesep=10pt]{python}
+%   import numpy  
+%   print("this is a piece of code")
+% \end{minted}
+% \caption{Example of a Code Piece.}
+% \label{lst:eg}
+% \end{listing}
 
 
-\subsection{Unigram and bigram probability computation (15\%)}
-
-\subsubsection{Preprocessing Decisions}
-We are given two plain-text corpora of reviews where each line is a single review. In order to compute the counts and probabilities for the unigram and bigram, we need to tokenize the words into two flat Python lists with each word of the corpora being a single list element. We chose a list as our data structure since it is easily iterable and sliceable.
-
-These were the preprocessing steps that we performed:
-\begin{enumerate}
-    \item[a.] Strip the leading and trailing whitespaces such as spaces, tabs, and newlines.
-    \item[b.] If the line is empty after removing whitespaces, move to the next line in the file.
-    \item[c.] Preprocess the current line by converting everything into lowercase.
-    \item[d.] Remove the punctuations using the \texttt{re} library.
-    \item[e.] If the processed line is not empty, split the line into individual words and add these into the token list.
-    \item[f.] All words are flattened into a single list from the non-empty processed lines.
-\end{enumerate}
+\subsection{Preprocessing Decisions}
+We are given two plain-text corpora of reviews where each line is a single review. In order to compute the counts for the unigram and bigram, we need to tokenize the words into two flat Python lists with each word of the corpora being a single list element. We chose a list as our data structure since it is easily iterable and sliceable.
 
 The following preprocessing decisions were made, along with the rationale behind each choice:
 
 \begin{enumerate}
     % ---------- LOWERCASE ----------
-    \item \textbf{Lowercasing} \\
-    We converted all the text to lower case to ensure that all the words with the same spelling are treated the same way. 
-    For example, ``Hotel'' and ``hotel'' are treated the same way (as the same token). 
-    This process helped us in reducing the vocabulary size and it also helped the model generalize better. \\
-
-    We used the following line of code to convert the existing text into lower case:
-
-    \begin{listing}[ht]
-    \begin{minted}[frame=single,framesep=10pt]{python}
-line = line.lower()
-    \end{minted}
-    \caption{Converting text to lower case.}
-    \label{lst:lower}
-    \end{listing}
+    \item \textbf{Lowercasing} - We converted all the text to lower case to ensure that all the words with the same spelling are treated the same way. This process helped us in reducing the vocabulary size and it also helped the model generalize better.
 
     % ---------- REMOVE PUNCTUATION ----------
-    \item \textbf{Removed Punctuation} \\
-    All punctuation is removed so that the focus is on the actual words in the text. 
-    This decision was taken since punctuation often doesn't contribute significant meaning in bag-of-words or similar models and it can introduce unnecessary noise. \\
-
-    The following line of code was introduced to remove punctuation:
-
-    \begin{listing}[ht]
-    \begin{minted}[frame=single,framesep=10pt]{python}
-import re
-text = re.sub(r"[^\w\s]", ' ', text).strip()
-    \end{minted}
-    \caption{Removing punctuation using regular expressions.}
-    \label{lst:punct}
-    \end{listing}
-
-    We used the regular expression module from the Python library to remove the punctuation in the text. 
-
-    \begin{itemize}
-        \item \verb|re.sub(pattern, repl, text)| replaces all occurrences of the regex pattern in text with repl (here, a space `' '`).
-        \item The pattern \verb|r"[^\w\s]"| means:
-        \begin{itemize}
-            \item \verb|[...]| : a character class (matches any character inside the brackets)
-            \item \verb|^| : negation (matches any character not in the set)
-            \item \verb|\w| : matches any ``word'' character (letters, digits, or underscore)
-            \item \verb|\s| : matches any whitespace character (spaces, tabs, newlines)
-        \end{itemize}
-        So, \verb|[^\w\s]| matches any character that is not a word character and not whitespace (i.e., punctuation and symbols). 
-        All such characters are replaced with a space. 
-        Finally, \verb|.strip()| removes leading and trailing whitespace from the result.
-    \end{itemize}
+    \item \textbf{Removed Punctuation} - All punctuation is removed so that the focus is on the actual words in the text. This decision was taken since punctuation often doesn't contribute significant meaning in bag-of-words or similar models and it can introduce unnecessary noise. We used the regular expression module \texttt{re} from the Python library to remove the punctuation in the text.
 
     % ---------- TOKENIZATION ----------
-    \item \textbf{Tokenization} \\
-    Since the data given to us is already tokenized with one review per line and the tokens separated by spaces, we simply split each line into words. 
-    This made it straightforward and easy to process each word individually. \\
-
-    The code used to perform tokenization is as follows:
-
-    \begin{listing}[ht]
-    \begin{minted}[frame=single,framesep=10pt]{python}
-def preprocess_file(input_path):
-    tokens = []
-    with open(input_path, encoding='utf-8') as fin:
-        for line in fin:
-            line = line.strip()
-            if not line:
-                continue
-            processed = preprocess_line(line)
-            if processed:
-                tokens.extend(processed.split())
-    return tokens
-    \end{minted}
-    \caption{Tokenization function to preprocess reviews.}
-    \label{lst:token}
-    \end{listing}
-
-    \begin{itemize}
-        \item \textbf{Reading Each Line:} The code reads each line (review) from the input file.
-        \item \textbf{Preprocessing:} Each line is lowercased and has punctuation removed via \verb|preprocess_line(line)|.
-        \item \textbf{Splitting into Tokens:}
-        \begin{itemize}
-            \item \verb|processed.split()| splits the cleaned line into a list of words using spaces as delimiters.
-            \item \verb|tokens.extend(...)| adds these words to the main tokens list.
-        \end{itemize}
-        \item The function returns a flat list of all tokens (words) from the file.
-    \end{itemize}
-
+    \item \textbf{Tokenization} - Since the data given to us is already tokenized with one review per line and the tokens separated by spaces, we simply split each line into words. This made it straightforward and easy to process each word individually.
 \end{enumerate}
 
 The preprocessing steps resulted in two flat Python lists called \texttt{train\_tokens} and \texttt{val\_tokens}.
 
-\subsubsection{Unigram Counts and Probabilities}
-We begin with our \texttt{train\_tokens} list and append start and stop tokens to it. The start token gives the bigram context of the first word and the stop token makes the bigram grammar a true probability distribution \cite{jurafsky2021slp}.
+\subsection{Unknown word handling}
+The input to this step is a list of tokens (words), and the output is a modified list in which rare words are replaced with the token \texttt{UNK}. This ensures that infrequent words are handled consistently, reducing sparsity in the dataset and improving the robustness of the model.
 
-The unigram is the simplest of language models. The unigram probability of a given word is computed using the formula:
-\[ P(w_i) = \frac{\text{Count}(w_i)}{N} \]
-where:
-\begin{itemize}
-    \item $\text{Count}(w_i)$ is the number of times the word $w_i$ appears in the training text.
-    \item $N$ is the total number of words (tokens) in the training text.
-\end{itemize}
+The steps were carried out are as follows:
+\begin{enumerate}
+\item \textbf{Threshold Selection} - We set the threshold for rare words at 2. Since the dataset is relatively small, a threshold of 2 ensures that we do not lose excessive vocabulary information while still handling infrequent words effectively.
+\item \textbf{Frequency Calculation} - A frequency dictionary was created to count occurrences of each token. For instance, if the token \textit{hotel} appears five times, then \texttt{freq['hotel'] = 5}.
+\item \textbf{Replacement Rule} - If a token appears fewer than 2 times, it is replaced with \texttt{UNK}. Otherwise, the original token is retained.
+\end{enumerate}
+\begin{listing}[ht]
+\begin{minted}[frame=single,framesep=10pt]{python}
+# unk handling
+def replace_with_unk(tokens, threshold=2):
+    freq = Counter(tokens)
+    return ['UNK' if freq[token] < threshold else token for token in tokens]
+\end{minted}
+\caption{Function to replace unknown words}
+\label{lst:unknown word handling}
+\end{listing}
+The result is a token list where all rare words are replaced by \texttt{UNK}, helping the model handle unseen or low-frequency words better. 
 
-We chose to create a dictionary of the form \texttt{\{'$w_i$':freq($w_i$)\}} where $w_i$ is a word in our vocabulary (key) and $\text{freq}(w_i)$ is its frequency in the training corpus (value). Python dictionaries offer constant time key insertions and lookups ($O(1)$) and are simple to work with. To create this dictionary, we initialized an empty dictionary \texttt{unigram\_freq} and iterated through the tokens. If a word is not in the dictionary, then we add it to the dictionary with a frequency of 0. Otherwise, we update its frequency.
+\subsection{Unigram Counts}
+We chose to create a dictionary of the form \texttt{\{'$w_i$':freq($w_i$)\}} where $w_i$ is a word in our vocabulary (key) and $\text{freq}(w_i)$ is its frequency in the training corpus (value). Python dictionaries offer constant time key insertions and lookups ($O(1)$) and are simple to work with. To create this dictionary, we initialized an empty dictionary \texttt{unigram\_freq} and iterated through the training tokens. If a word is not in the dictionary, then we add it to the dictionary with a frequency of 0. Otherwise, we update its frequency.
 
-Next, we initialize another empty dictionary called \texttt{unigram\_probs}. We iterate through our \texttt{unigram\_freq} dictionary and keep adding the (key, value) pairs to this new dictionary after dividing the value by $N$. This gives us our desired dictionary of the form \texttt{\{'$w_i$':P($w_i$)\}}.
-
-\subsubsection{Bigram Counts and Probabilities}
-The bigram model calculates the probability of a word based on the word that appeared immediately before it. In other words, it computes the conditional probability $P(w_i | w_{i-1})$ of the word $w_i$, given that the previous word was $w_{i-1}$. The bigram probability can be computed using the formula:
-\[ P(w_i | w_{i-1}) = \frac{\text{Count}(w_{i-1}, w_i)}{\text{Count}(w_{i-1})} \]
-where:
-\begin{itemize}
-    \item $\text{Count}(w_{i-1}, w_i)$ is the number of times the pair of words (the bigram) appears together in that order.
-    \item $\text{Count}(w_{i-1})$ is the unigram count of the preceding word.
-\end{itemize}
-
+\subsection{Bigram Counts}
 Next, we compute the bigram frequencies into a \texttt{bigram\_freq} dictionary where each key is a bigram and the value is its frequency. To create this dictionary, we initialize the empty \texttt{bigram\_freq} dictionary and iterate. We use the \texttt{zip} function to combine our \texttt{train\_tokens\_with\_stop} list and a copy of this list starting from the second word to create a sequence of tuples, where each tuple is a bigram. We then iterate over each tuple and follow the same counting logic as before: if the tuple is not in \texttt{bigram\_freq}, we assign its value as 0. Otherwise, we increment its count. This gives us a dictionary of the form \texttt{\{('$w_{i-1}$','$w_i$'):bigram frequency\}}.
 
-Finally, we calculate the bigram probabilities by initializing an empty dictionary \texttt{bigram\_probs}. We iterate through our \texttt{bigram\_freq} dictionary and add the (key, value) pairs to this new dictionary after dividing the value by the unigram frequency of the first word in the bigram.
+\subsection{Smoothing}
+Smoothing techniques are used to handle tokens (for unigrams) and pairs (for bigrams) that were not seen during the train phase. When a word/pair occurs during the test phase that has not been encountered in the train phase, probability of that token becomes zero. Zero probability results in \textbf{infinite perplexity}. To avoid this, we use smoothing techniques.
+ 
+In this assignment, we have explored \textbf{add-k smoothing} techniques with different \texttt{k} values. \texttt{k} values used are \texttt{[0.001, 0.01, 0.1, 0.5, 1.0]}. Add-k smoothing with \texttt{k=1.0} is called \textbf{Laplace smoothing}.
+ 
+Formulae for calculating Add-k smoothing:
+ 
+\textbf{For Unigram}: $$ P(w) = \frac{\text{count}(w) + k}{N + k * V} \\[1em] $$
+ 
+\textbf{For Bigram}: $$ P(w, v) = \frac{\text{count}(w, v) + k}{\text{count}(w) + k * V} $$
+ 
+where $\text{count(w)}$ is the count of token $\text{w}$, $\text{count(w, v)}$ is the count for pair $\text{(w,v)$, $\text{N}$ is the corpus size, and $\text{V}$ is the vocabulary size
 
-\subsubsection {Perplexity}
+\begin{listing}[ht]
+\begin{minted}[frame=single,framesep=10pt]{python}
+def add_k_smoothing_unigram(c_w, N, V, k):
+  return (c_w + k) / (N + k * V)
+
+def add_k_smoothing_bigram(c_w_v, c_w, V, k):
+  return (c_w_v + k) / (c_w + k * V)
+\end{minted}
+\caption{Functions to perform smoothing}
+\label{lst:smoothing}
+\end{listing}
+
+The above functions were used to calculate smoothing. These functions are called during perplexity calculation and they return the smoothed probabilities.
+
+\subsection{Perplexity}
 We use the following formula for calculating perplexity:
 $$ l = \frac{1}{N} \sum_{i=1}^N \log P(w_i | w_{i-1}, \dots, w_{i-n+1})$$
 $$ PP = 2^{-l} $$
-where:
-\begin{itemize}
-    \item $N$ is the size of the training set.
-    \item $P(w_i | w_{i-1}, \dots, w_{i-n+1})$ is the probability of the $i$th $N$-Gram
-\end{itemize}
+where $N$ is the size of the training set, $P(w_i | w_{i-1}, \dots, w_{i-n+1})$ is the probability of the $i$th $N$-Gram
 
-This is implemented using two functions: one for unigrams and one for bigrams. Both functions take the \texttt{corpus} (Preprocessed corpus), \texttt{unigram\_counts} (The number of unigrams in the training set), \texttt{N} (Training corpus size), \texttt{V} (Vocab size), and \texttt{k} (The smoothing parameter). The bigram perplexity function takes one additional parameter, \texttt{bigram\_counts} (The number of unigrams in the training set). \\
+This is implemented using two functions: one for unigrams and one for bigrams. Both functions take the \texttt{corpus} (preprocessed corpus), \texttt{unigram\_counts} (the number of unigrams in the training set), $\text{N}$ (training corpus size), $\text{V}$ (vocabulary size), and $\text{k}$ (smoothing parameter). The bigram perplexity function takes one additional parameter, \texttt{bigram\_counts} (the number of unigrams in the training set). \\
 
-    \begin{listing}[ht]
-    \begin{minted}[frame=single,framesep=10pt]{python}
+\begin{listing}[!htbp]
+\begin{minted}[frame=single,framesep=10pt]{python}
 def calculate_unigram_perplexity(corpus, unigram_counts, N, V, k):
-
     # M = test corpus size
     M = len(corpus)
     total_log_prob = 0.0
 
     for token in corpus:
-        # set default value of count to 0 if token not found in train set
-        c_w = unigram_counts.get(token, 0) 
-        
+        # set default value of count to 0 
+        # if token not found in train set tokens
+        c_w = unigram_counts.get(token, 0)
         prob = add_k_smoothing_unigram(c_w, N, V, k)
         total_log_prob += math.log2(prob)
 
     l = total_log_prob / M
-    perplexity = math.exp(-l) # 2.0 ** -l
+    perplexity = math.exp2(-l) # 2.0 ** -l
 
     return perplexity
-    \end{minted}
-    \caption{The Unigram perplexity function.}
-    \label{lst:unigram_perplexity}
-    \end{listing}
+\end{minted}
+\caption{The unigram perplexity function}
+\label{lst:unigram_perplexity}
+\end{listing}
 
-    \begin{listing}
-                \begin{minted}[frame=single,framesep=10pt]{python}
+\begin{listing}[!htbp]
+\begin{minted}[frame=single,framesep=10pt]{python}
 def calculate_bigram_perplexity(corpus, unigram_counts, bigram_counts, V, k):
-
     # Create bigrams from the validation corpus
     bigram_corpus = zip(corpus, corpus[1:])
-
     M = len(corpus)
     total_log_prob = 0.0
 
     for bigram in bigram_corpus:
         previous_word = bigram[0]
-        
-        # set default value of count to 0 if bigram not found in train set
+        # set default value of count to 0 
+        # if bigram not found in train set bigrams
         c_w_v = bigram_counts.get(bigram, 0) 
-        
         c_w = unigram_counts.get(previous_word, 0)
         prob = add_k_smoothing_bigram(c_w_v, c_w, V, k)
         total_log_prob += math.log2(prob)
 
     l = total_log_prob / M
-    perplexity = math.exp(-l) # 2.0 ** -l
+    perplexity = math.exp2(-l) # 2.0 ** -l
 
     return perplexity
-    \end{minted}
-    \caption{The Bigram perplexity function.}
-    \label{lst:bigram_perplexity}
-    \end{listing}
+\end{minted}
+\caption{The bigram perplexity function}
+\label{lst:bigram_perplexity}
+\end{listing}
 
-The smoothed probabilities are retrieved using the \texttt{add\_k\_smoothing\_unigram} function, which passes the value of the \texttt{k} parameter and calculates the smoothed probabilities. We get the smoothed probability of every n-gram in the corpus, find their logarithm, and find their sum. We then divide that sum by $M$ to get the $l$ value. We then raise $2$ to the power of $l$ before returning.  
+The smoothed probabilities are retrieved using the \texttt{add\_k\_smoothing\_unigram} function, which gets the value of the \texttt{k} parameter and calculates the smoothed probabilities. We get the smoothed probability of every n-gram in the corpus, find their logarithm, and find their sum. We then divide that sum by $M$ to get the $l$ value. We then raise $2$ to the power of $-l$ before returning.
 
-\todo{
-% \begin{itemize}
-    \subsection{Smoothing (15\%)}
-    \subsection{Unknown word handling (15\%)}
-% \end{titemize}
-}
+Similarly, when calculating the bigram perplexity, we pair up the words in the corpus using the \texttt{zip} tool and iterate through each tuple of words. We fetch the counts of the bigram and the count of the previous word and pass these as arguments to the \texttt{add\_k\_smoothing\_bigram} function along with $V$ and $k$. We get the smoothed probability of every bigram in the corpus, find their logarithm, and find their sum. We then divide that sum by $M$ to get the $l$ value. We then raise $2$ to the power of $-l$ before returning.
+
+\FloatBarrier
+
+\section{Evaluation, Analysis, and Findings}
+For hyperparameter \texttt{k} for \textbf{add-k smoothing}, upon trying different values, we inferred that while \texttt{k=0.001} resulted in lower perplexities in the training set, \texttt{k=0.01} produced significantly better results (lower perplexities) for both bigram and unigram during the testing phase. This helped us evaluate model performance and mitigate over-smoothing.\\
+ 
+\centerline{\textbf{Table 1:} Training set Perplexity with different k values in add-k smoothing}
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{} & \textbf{$k=0.001$} & \textbf{$k=0.01$} & \textbf{$k=0.1$} & \textbf{$k=0.5$} & \textbf{$k=1.0$} \\
+\hline
+\textbf{Unigram} & 391.324 & 391.324 & 391.340 & 391.680 & 392.592 \\
+\textbf{Bigram}  & 36.4174 & 51.723  & 122.885 & 303.366 & 459.282 \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{1em}
+\centerline{\textbf{Table 2:} Validation set Perplexity with different k values in add-k smoothing}
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{} & \textbf{$k=0.001$} & \textbf{$k=0.01$} & \textbf{$k=0.1$} & \textbf{$k=0.5$} & \textbf{$k=1.0$} \\
+\hline
+\textbf{Unigram} & 756.657 & 670.337 & 594.195 & 547.696 & 530.667 \\
+\textbf{Bigram}  & 425.511 & 293.423 & 341.753 & 542.233 & 703.129 \\
+\hline
+\end{tabular}
+\end{table}
 
 
-\section{Eval, Analysis and Findings}
-\todo{to add (30\%)}
+
+\section{Programming Libraries Used}
+The following modules and libraries were used:
+\begin{itemize}
+    \item \texttt{\textbf{re}} - This module provides regular expression matching operations similar to those found in Perl.
+    \item \texttt{\textbf{Counter}} - We used the \texttt{Counter} class from the \texttt{collections} module, which is a dict subclass for counting hashable objects.
+    \item \texttt{\textbf{math}} - This module provides access to common mathematical functions and constants, including those defined by the C standard.
+    \item \texttt{\textbf{tabulate}} - We used the \texttt{tabulate} which is a PyPI library that allows pretty-printing of tabular data.
+\end{itemize}
 
 
-\section{Others}
-\todo{to add (10\%)}
+\section{Contributions of members}
+We began by preprocessing the dataset, a step handled by \textbf{Samiha}. This involved converting all words to lowercase, removing punctuation, and tokenizing the reviews into words.
+Unknown or rare words were replaced with \texttt{UNK} tokens using a threshold of 2, and the processed tokens were stored in a list data structure.\\
 
-\newpage
-\begin{thebibliography}{9}
+Next, \textbf{Abhirup} computed unigram and bigram frequencies from this preprocessed data, producing two dictionaries: one for unigram frequencies and one for bigram frequencies. He also integrated the smoothing functions that give the smoothed probabilities inside the perplexity functions once they were ready\\
 
-\bibitem{jurafsky2021slp}
-Chapter 3, Section 3.1.2, Daniel Jurafsky and James H. Martin.
-\newblock \textit{Speech and Language Processing (3rd ed. draft)}.
-\newblock \url{https://web.stanford.edu/~jurafsky/slp3/}.
-\newblock 2021.
+\textbf{Buvana} applied the add-\(k\) smoothing and Laplace smoothing techniques for the training data and the validation data. Additionally, she computed, analyzed, and tabulated the perplexity numbers for different \texttt{k} values.\\
 
-\end{thebibliography}
+Finally, \textbf{Adem} implemented the perplexity calculation formula. Two functions were written, one for unigram perplexity and another for bigram perplexity. He also removed code smells and ensured the end-to-end pipeline worked correctly.\\
+
+All members put in equal efforts in completing both the source code and report for this assignment and we are thankful for each other's contributions.\\
+
+\section{Feedback}
+We feel that this assignment gave us a chance to apply the theory that was presented during the lectures as a hands-on exercise. It cleared our misconceptions and deepened our understanding of elementary language models. As such, we feel that the difficulty level of this assignment was appropriate when compared to the material covered in the lectures. We enjoyed working on this assignment and are thankful for our instructor Dr Xinya Du's guidance.
+
+
+% \todo{
+% % \begin{itemize}
+%     \subsection{Smoothing (15\%)}
+%     \subsection{Unknown word handling (15\%)}
+% % \end{titemize}
+% }
+
+
+% \section{Eval, Analysis and Findings}
+% \todo{to add (30\%)}
+
+
+% \section{Others}
+% \todo{to add (10\%)}
+
 
 
 \end{document}
